@@ -1,0 +1,597 @@
+basePath: /
+definitions:
+  dto.Booking:
+    properties:
+      conferenceLink:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: string
+      slotId:
+        type: string
+      status:
+        type: string
+      userId:
+        type: string
+    type: object
+  dto.BookingResponse:
+    properties:
+      booking:
+        $ref: '#/definitions/dto.Booking'
+    type: object
+  dto.BookingsListResponse:
+    properties:
+      bookings:
+        items:
+          $ref: '#/definitions/dto.Booking'
+        type: array
+      pagination:
+        $ref: '#/definitions/dto.Pagination'
+    type: object
+  dto.BookingsResponse:
+    properties:
+      bookings:
+        items:
+          $ref: '#/definitions/dto.Booking'
+        type: array
+    type: object
+  dto.CreateBookingRequest:
+    properties:
+      createConferenceLink:
+        type: boolean
+      slotId:
+        type: string
+    required:
+    - slotId
+    type: object
+  dto.CreateRoomRequest:
+    properties:
+      capacity:
+        minimum: 1
+        type: integer
+      description:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  dto.CreateRoomResponse:
+    properties:
+      room:
+        $ref: '#/definitions/dto.Room'
+    type: object
+  dto.CreateScheduleRequest:
+    properties:
+      daysOfWeek:
+        items:
+          type: integer
+        minItems: 1
+        type: array
+      endTime:
+        type: string
+      id:
+        type: string
+      roomId:
+        type: string
+      startTime:
+        type: string
+    required:
+    - endTime
+    - startTime
+    type: object
+  dto.CreateScheduleResponse:
+    properties:
+      schedule:
+        $ref: '#/definitions/dto.Schedule'
+    type: object
+  dto.DummyLoginRequest:
+    properties:
+      role:
+        enum:
+        - user
+        - admin
+        type: string
+    required:
+    - role
+    type: object
+  dto.DummyLoginResponse:
+    properties:
+      token:
+        type: string
+    type: object
+  dto.GetSlotsResponse:
+    properties:
+      slots:
+        items:
+          $ref: '#/definitions/dto.Slot'
+        type: array
+    type: object
+  dto.ListRoomsResponse:
+    properties:
+      rooms:
+        items:
+          $ref: '#/definitions/dto.Room'
+        type: array
+    type: object
+  dto.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 6
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  dto.Pagination:
+    properties:
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      total:
+        type: integer
+    type: object
+  dto.RegisterRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 6
+        type: string
+      role:
+        enum:
+        - user
+        - admin
+        type: string
+    required:
+    - email
+    - password
+    - role
+    type: object
+  dto.RegisterResponse:
+    properties:
+      user:
+        $ref: '#/definitions/dto.User'
+    type: object
+  dto.Room:
+    properties:
+      capacity:
+        type: integer
+      createdAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  dto.Schedule:
+    properties:
+      daysOfWeek:
+        items:
+          type: integer
+        type: array
+      endTime:
+        type: string
+      id:
+        type: string
+      roomId:
+        type: string
+      startTime:
+        type: string
+    type: object
+  dto.Slot:
+    properties:
+      end:
+        type: string
+      id:
+        type: string
+      roomId:
+        type: string
+      start:
+        type: string
+    type: object
+  dto.User:
+    properties:
+      createdAt:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      role:
+        type: string
+    type: object
+  httpx.ErrorDetail:
+    properties:
+      code:
+        type: string
+      message:
+        type: string
+    type: object
+  httpx.ErrorResponse:
+    properties:
+      error:
+        $ref: '#/definitions/httpx.ErrorDetail'
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Сервис для управления переговорками, расписаниями и бронями.
+  title: API бронирования переговорок
+  version: "1.0"
+paths:
+  /bookings/{bookingId}/cancel:
+    post:
+      description: Отменяет бронь текущего пользователя. Операция идемпотентна. Только
+        для роли user.
+      parameters:
+      - description: UUID брони
+        in: path
+        name: bookingId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BookingResponse'
+        "400":
+          description: invalid UUID
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: cannot cancel another user's booking
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: booking not found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Отменить бронь
+      tags:
+      - Брони
+  /bookings/create:
+    post:
+      consumes:
+      - application/json
+      description: Создаёт бронь на слот от имени текущего пользователя. Только для
+        роли user.
+      parameters:
+      - description: Данные брони
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateBookingRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.BookingResponse'
+        "400":
+          description: invalid request or slot in the past
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: slot not found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: slot already booked
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Создать бронь
+      tags:
+      - Брони
+  /bookings/list:
+    get:
+      description: Возвращает постраничный список всех броней. Только для роли admin.
+      parameters:
+      - description: Номер страницы (по умолчанию 1)
+        in: query
+        name: page
+        type: integer
+      - description: Размер страницы (по умолчанию 20, максимум 100)
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BookingsListResponse'
+        "400":
+          description: invalid pagination parameters
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Список всех броней
+      tags:
+      - Брони
+  /bookings/my:
+    get:
+      description: Возвращает список будущих броней текущего пользователя. Только
+        для роли user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BookingsResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Мои брони
+      tags:
+      - Брони
+  /dummyLogin:
+    post:
+      consumes:
+      - application/json
+      description: 'Выдаёт JWT-токен по роли. UUID пользователя фиксирован для каждой
+        роли: один UUID для admin, другой для user.'
+      parameters:
+      - description: Роль пользователя
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.DummyLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.DummyLoginResponse'
+        "400":
+          description: invalid request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Получить тестовый JWT
+      tags:
+      - Авторизация
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Проверяет учётные данные и возвращает JWT-токен
+      parameters:
+      - description: Учётные данные
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.DummyLoginResponse'
+        "400":
+          description: invalid request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: invalid credentials
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Вход по email и паролю
+      tags:
+      - Авторизация
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Создаёт нового пользователя по email и паролю, возвращает данные
+        пользователя
+      parameters:
+      - description: Данные для регистрации
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.RegisterResponse'
+        "400":
+          description: email already taken
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      summary: Регистрация пользователя
+      tags:
+      - Авторизация
+  /rooms/{roomId}/schedule/create:
+    post:
+      consumes:
+      - application/json
+      description: Создаёт расписание доступности для переговорки. Расписание можно
+        задать только один раз. Только для роли admin.
+      parameters:
+      - description: UUID переговорки
+        in: path
+        name: roomId
+        required: true
+        type: string
+      - description: Расписание
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateScheduleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.CreateScheduleResponse'
+        "400":
+          description: invalid request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: room not found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: schedule already exists
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Создать расписание переговорки
+      tags:
+      - Расписание
+  /rooms/{roomId}/slots/list:
+    get:
+      description: Возвращает список свободных слотов переговорки на указанную дату
+      parameters:
+      - description: UUID переговорки
+        in: path
+        name: roomId
+        required: true
+        type: string
+      - description: Дата в формате YYYY-MM-DD
+        in: query
+        name: date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.GetSlotsResponse'
+        "400":
+          description: invalid request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: room not found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Доступные слоты переговорки
+      tags:
+      - Слоты
+  /rooms/create:
+    post:
+      consumes:
+      - application/json
+      description: Создаёт новую переговорку. Только для роли admin.
+      parameters:
+      - description: Данные переговорки
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateRoomRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.CreateRoomResponse'
+        "400":
+          description: invalid request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Создать переговорку
+      tags:
+      - Переговорки
+  /rooms/list:
+    get:
+      description: Возвращает список всех переговорок
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ListRoomsResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Список переговорок
+      tags:
+      - Переговорки
+securityDefinitions:
+  BearerAuth:
+    description: 'JWT-токен в формате: Bearer <token>'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

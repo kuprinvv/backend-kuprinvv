@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: booking_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: booking
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d booking"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    build:
+      context: .
+      dockerfile: migrate.Dockerfile
+    container_name: booking_migrate
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_DSN: postgres://postgres:postgres@db:5432/booking?sslmode=disable
+
+  app:
+    build:
+      context: .
+      dockerfile: app.Dockerfile
+    container_name: booking_app
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "8080:8080"
+    environment:
+      DB_DSN: postgres://postgres:postgres@db:5432/booking?sslmode=disable
+      JWT: 1a02e934e3ec4d125b319718640b7ce4
+
+volumes:
+  pgdata:

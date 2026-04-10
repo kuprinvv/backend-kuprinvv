@@ -1,0 +1,10 @@
+internal/repository
+internal/di
+internal/app
+internal/config
+internal/mocks
+internal/client
+/tests/
+/cmd
+/cmd/
+/docs
